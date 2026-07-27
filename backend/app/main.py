@@ -1,16 +1,21 @@
 import os
+import hashlib
+import json
+import csv
+import io
+
 from dotenv import load_dotenv
 from openai import OpenAI
-
-load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+import redis
 
 from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from app.database import get_db, init_db, Transaction
-import csv
-import io
+
+load_dotenv()
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
 app = FastAPI(title="SpendLens API")
 
@@ -76,6 +81,14 @@ def analyze_spending(db: Session = Depends(get_db)):
         for t in transactions
     ])
 
+    cache_key = "analyze:" + hashlib.sha256(transaction_text.encode()).hexdigest()
+
+    cached_result = redis_client.get(cache_key)
+    if cached_result:
+        result = json.loads(cached_result)
+        result["cached"] = True
+        return result
+
     prompt = f"""You are a personal finance assistant. Analyze the following transactions and give 3-4 concise, natural language insights about spending patterns, unusual expenses, or areas to save money. Be specific and reference actual numbers.
 
 Transactions:
@@ -90,4 +103,8 @@ Insights:"""
     )
 
     insight = response.choices[0].message.content
-    return {"insight": insight}
+    result = {"insight": insight, "cached": False}
+
+    redis_client.setex(cache_key, 3600, json.dumps(result))
+
+    return result
