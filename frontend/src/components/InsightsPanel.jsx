@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { analyzeSpending } from '../api';
 
-export default function InsightsPanel() {
+export default function InsightsPanel({ hasTransactions }) {
   const [insight, setInsight] = useState(null);
   const [cached, setCached] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -13,17 +13,19 @@ export default function InsightsPanel() {
       setInsight(result.insight);
       setCached(result.cached);
     } catch (err) {
-      setInsight("Couldn't generate insights. Make sure transactions are uploaded and the server is running.");
+      setInsight("Couldn't generate insights. Make sure the server is running.");
     }
     setLoading(false);
   }
 
   return (
-    <div style={{
+    <div className="card" style={{
       background: 'var(--surface)',
       border: '1px solid var(--border)',
       borderRadius: 'var(--radius)',
       padding: '1.5rem',
+      position: 'sticky',
+      top: '1.5rem',
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3>Spending insights</h3>
@@ -41,9 +43,9 @@ export default function InsightsPanel() {
 
       <button
         onClick={handleAnalyze}
-        disabled={loading}
+        disabled={loading || !hasTransactions}
         style={{
-          background: loading ? 'var(--text-secondary)' : 'var(--primary)',
+          background: (loading || !hasTransactions) ? '#CBD5E1' : 'var(--primary)',
           color: 'white',
           border: 'none',
           borderRadius: '8px',
@@ -55,6 +57,12 @@ export default function InsightsPanel() {
       >
         {loading ? 'Analyzing...' : 'Generate insights'}
       </button>
+
+      {!hasTransactions && !insight && (
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+          Upload a statement first to generate insights.
+        </p>
+      )}
 
       {insight && (
         <div>
