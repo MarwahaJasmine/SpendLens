@@ -52,19 +52,36 @@ async def upload_transactions(file: UploadFile = File(...), db: Session = Depend
     contents = await file.read()
     decoded = contents.decode("utf-8")
     reader = csv.DictReader(io.StringIO(decoded))
-    transactions = []
+
+    added = 0
+    skipped = 0
+
     for row in reader:
+        date = row.get("Date", "")
+        description = row.get("Description", "")
+        amount = float(row.get("Amount", 0))
+
+        existing = db.query(Transaction).filter(
+            Transaction.date == date,
+            Transaction.description == description,
+            Transaction.amount == amount,
+        ).first()
+
+        if existing:
+            skipped += 1
+            continue
+
         transaction = Transaction(
-            date=row.get("Date", ""),
-            description=row.get("Description", ""),
-            amount=float(row.get("Amount", 0)),
+            date=date,
+            description=description,
+            amount=amount,
             category=None
         )
         db.add(transaction)
-        transactions.append(transaction)
-    db.commit()
-    return {"message": f"Successfully uploaded {len(transactions)} transactions"}
+        added += 1
 
+    db.commit()
+    return {"message": f"Added {added} new transaction(s), skipped {skipped} duplicate(s)"}
 
 @app.get("/transactions")
 def get_transactions(db: Session = Depends(get_db)):
