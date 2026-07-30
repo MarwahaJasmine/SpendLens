@@ -5,7 +5,6 @@ An AI-powered personal finance dashboard. Upload a bank statement (CSV), and Spe
 Built as a portfolio project to demonstrate full-stack, cloud-integrated software development — from database design through to a live, publicly deployed API.
 
 ![SpendLens dashboard](docs/screenshot-dashboard.png)
-*(Add a screenshot of the running dashboard here — see "Screenshots" section below.)*
 
 ---
 
@@ -184,7 +183,9 @@ Open the local URL Vite prints (typically `http://localhost:5173`).
 
 ## Screenshots
 
-*(Add 2-3 screenshots here: the upload flow, populated transactions table, and generated insights panel.)*
+![SpendLens dashboard](docs/screenshot-dashboard.png)
+![SpendLens dashboard](docs/screenshot-insights.png)
+
 
 ---
 
