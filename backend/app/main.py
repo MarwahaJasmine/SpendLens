@@ -3,6 +3,10 @@ import hashlib
 import json
 import csv
 import io
+from datetime import datetime
+
+import boto3
+from botocore.exceptions import ClientError
 
 from dotenv import load_dotenv
 from openai import OpenAI
@@ -17,14 +21,22 @@ load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 redis_client = redis.Redis(host="localhost", port=6379, db=0, decode_responses=True)
 
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    region_name=os.getenv("AWS_REGION"),
+)
+S3_BUCKET = "spendlens-jasmine-2026"
+
 app = FastAPI(title="SpendLens API")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-    "http://localhost:3000",
-    "http://localhost:5173",
-    "http://localhost:5174",
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -50,6 +62,20 @@ def health_check():
 @app.post("/upload")
 async def upload_transactions(file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
+
+    timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    s3_key = f"uploads/{timestamp}-{file.filename}"
+
+    try:
+        s3_client.put_object(
+            Bucket=S3_BUCKET,
+            Key=s3_key,
+            Body=contents,
+        )
+    except ClientError as e:
+        print(f"S3 upload failed: {e}")
+        s3_key = None
+
     decoded = contents.decode("utf-8")
     reader = csv.DictReader(io.StringIO(decoded))
 
@@ -81,7 +107,11 @@ async def upload_transactions(file: UploadFile = File(...), db: Session = Depend
         added += 1
 
     db.commit()
-    return {"message": f"Added {added} new transaction(s), skipped {skipped} duplicate(s)"}
+    return {
+        "message": f"Added {added} new transaction(s), skipped {skipped} duplicate(s)",
+        "archived_to_s3": s3_key is not None,
+    }
+
 
 @app.get("/transactions")
 def get_transactions(db: Session = Depends(get_db)):
