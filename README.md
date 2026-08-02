@@ -2,7 +2,7 @@
 
 An AI-powered personal finance dashboard. Upload a bank statement (CSV), and SpendLens parses your transactions, archives them to the cloud, and generates natural language spending insights using OpenAI's API.
 
-Built as a portfolio project to demonstrate full-stack, cloud-integrated software development — from database design through to a live, publicly deployed API.
+Built as a portfolio project to demonstrate full-stack, cloud-integrated software development, from database design through to a live, publicly deployed API.
 
 ![SpendLens dashboard](docs/screenshot-dashboard.png)
 
@@ -10,7 +10,7 @@ Built as a portfolio project to demonstrate full-stack, cloud-integrated softwar
 
 ## Live Demo
 
-Backend API: `http://3.142.184.176:8000` (EC2-hosted; may not always be running — see Deployment Notes)
+Backend API: `http://3.142.184.176:8000` (EC2-hosted; may not always be running, see Deployment Notes)
 
 To run the full app locally, see [Setup](#setup) below.
 
@@ -46,7 +46,7 @@ To run the full app locally, see [Setup](#setup) below.
 **Flow:**
 1. User uploads a CSV via the React frontend.
 2. FastAPI archives the raw file to S3, then parses and deduplicates transactions into PostgreSQL.
-3. On request, `/analyze` builds a prompt from the stored transactions and calls OpenAI — unless an identical request was made recently, in which case Redis serves the cached result.
+3. On request, `/analyze` builds a prompt from the stored transactions and calls OpenAI, unless an identical request was made recently, in which case Redis serves the cached result.
 
 ---
 
@@ -159,15 +159,15 @@ Open the local URL Vite prints (typically `http://localhost:5173`).
 
 ## Design Decisions & Trade-offs
 
-**Duplicate detection via composite match, not a unique DB constraint.** Transactions are checked against existing rows by `(date, description, amount)` before insertion. This is a pragmatic choice for CSV re-uploads — the far more common real-world case than two genuinely identical transactions occurring on the same day — rather than a database-level uniqueness guarantee.
+**Duplicate detection via composite match, not a unique DB constraint.** Transactions are checked against existing rows by `(date, description, amount)` before insertion. This is a pragmatic choice for CSV re-uploads, the far more common real-world case than two genuinely identical transactions occurring on the same day, rather than a database-level uniqueness guarantee.
 
-**Cache key derived from transaction content, not time.** The Redis cache key for `/analyze` is a SHA-256 hash of the current transaction data. This means the cache automatically invalidates itself whenever the underlying data changes (e.g. a new upload), with no manual cache-busting logic required — while still serving instantly for repeated requests on unchanged data.
+**Cache key derived from transaction content, not time.** The Redis cache key for `/analyze` is a SHA-256 hash of the current transaction data. This means the cache automatically invalidates itself whenever the underlying data changes (e.g. a new upload), with no manual cache-busting logic required, while still serving instantly for repeated requests on unchanged data.
 
 **Single EC2 instance instead of managed services.** For this portfolio deployment, PostgreSQL and Redis run alongside FastAPI on one EC2 instance rather than using managed services like RDS (Postgres) or ElastiCache (Redis). This was a deliberate scope decision to keep the deployment approachable within the project timeline. A production version of SpendLens would split these onto managed services for better reliability, backups, and independent scaling — and IAM permissions would be tightened from `AdministratorAccess` to a scoped policy covering only the specific S3/EC2 actions the app needs.
 
-**S3 upload failures don't block the request.** If the S3 archive step fails (e.g. expired credentials, network issue), the app still processes the CSV into Postgres normally. Cloud archival is treated as a resilience "nice-to-have" layered on top of core functionality, not a hard dependency — the app degrades gracefully rather than failing outright.
+**S3 upload failures don't block the request.** If the S3 archive step fails (e.g. expired credentials, network issue), the app still processes the CSV into Postgres normally. Cloud archival is treated as a resilience "nice-to-have" layered on top of core functionality, not a hard dependency, the app degrades gracefully rather than failing outright.
 
-**`gpt-4o-mini` over larger models.** Chosen for cost efficiency during iterative development and testing — insight quality has been more than sufficient for the use case, at a fraction of the cost of larger models.
+**`gpt-4o-mini` over larger models.** Chosen for cost efficiency during iterative development and testing, insight quality has been more than sufficient for the use case, at a fraction of the cost of larger models.
 
 ---
 
@@ -175,9 +175,9 @@ Open the local URL Vite prints (typically `http://localhost:5173`).
 
 - No user authentication — single-user/demo scope for now
 - No automatic transaction categorization (the `category` field exists in the schema but isn't populated yet — a natural extension using the same OpenAI integration)
-- No spending visualizations/charts yet — insights are text-only
+- No spending visualizations/charts yet, insights are text-only
 - EC2 instance runs a single Postgres/Redis setup with no automated backups
-- No CI/CD pipeline — deployments are currently manual via SSH
+- No CI/CD pipeline, deployments are currently manual via SSH
 
 ---
 
